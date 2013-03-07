@@ -3,15 +3,16 @@ program qmc
     implicit none
 
     integer, parameter :: N = 400     ! number of walkers
-    integer, parameter :: k = 3*10**4 ! number of walks
-    integer, parameter :: m = 25      ! number of alpha values
+    integer, parameter :: k = 26*10**3! number of walks
+    integer, parameter :: m = 5       ! number of alpha values
     real(8), parameter :: lower = 0.4 ! lower limit of alpha range
     real(8), parameter :: upper = 0.6 ! upper limit of alpha range
     real(8), dimension(1, m) :: aarray
     real(8) :: a
     real(8), dimension(3, N) :: r
-    real(8), dimension(1, k) :: E
-    real(8) :: E_av
+    real(8), dimension(1, N) :: E_L
+    real(8), dimension(k, N) :: E_L_tot
+    real(8) :: Eav
     real(8) :: Esq
     real(8) :: var
     integer :: i
@@ -26,19 +27,20 @@ program qmc
         call init_random_seed()
         call random_number(r)
 
-        do j = 1, 1000
+        do j = 1, 4000
             call calc_r(a, N, r)
         end do
 
         do j = 1, k
             call calc_r(a, N, r)
-            call calc_E(a, N, r, E(1, j))
+            call calc_E_L(a, r, E_L)
+            E_L_tot(j, :) = E_l(1, :)
         end do
 
-        E_av = 1d0 / k * sum(E)
-        Esq = 1d0 / k * sum(E**2)
-        var = Esq - E_av**2
-        write (12, *) a, E_av, var
+        Eav = 1d0 / N * sum(1d0 / k * sum(E_L_tot, dim = 1))
+        Esq = 1d0 / N * sum(1d0 / k * sum(E_L_tot**2, dim = 1))
+        var = Esq - Eav**2
+        write (12, *) a, Eav, var
 
     end do
 
@@ -97,16 +99,13 @@ contains
 
     end subroutine
 
-    subroutine calc_E(a, N, r, E)
+    subroutine calc_E_L(a, r, E_L)
 
         real(8), intent(in) :: a
-        integer, intent(in) :: N
         real(8), dimension(:, :), intent(in) :: r
-        real(8), dimension(1, N) :: E_L
-        real(8), intent(inout) :: E
+        real(8), dimension(:, :), intent(inout) :: E_L
 
         E_L(1, :) = 3d0 * a + (1 / 2d0 - 2d0 * a**2) * sum(r**2, dim = 1)
-        E = 1d0 / N * sum(E_L)
 
     end subroutine
 
