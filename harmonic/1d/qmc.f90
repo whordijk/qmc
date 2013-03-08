@@ -2,11 +2,11 @@ program qmc
 
     implicit none
 
-    integer, parameter :: N = 400     ! number of walkers
-    integer, parameter :: k = 26*10**3! number of walks
-    integer, parameter :: m = 5       ! number of alpha values
-    real(8), parameter :: lower = 0.4 ! lower limit of alpha range
-    real(8), parameter :: upper = 0.6 ! upper limit of alpha range
+    integer, parameter :: N = 400      ! number of walkers
+    integer, parameter :: k = 26*10**3 ! number of walks
+    integer, parameter :: m = 5        ! number of alpha values
+    real(8), parameter :: lower = 0.4  ! lower limit of alpha range
+    real(8), parameter :: upper = 0.6  ! upper limit of alpha range
     real(8), dimension(1, m) :: aarray
     real(8) :: a
     real(8), dimension(1, N) :: x
