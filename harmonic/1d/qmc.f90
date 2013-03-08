@@ -10,40 +10,23 @@ program qmc
     real(8), dimension(1, m) :: aarray
     real(8) :: a
     real(8), dimension(1, N) :: x
-    real(8), dimension(1, N) :: E_L
-    real(8), dimension(k, N) :: E_L_tot
     real(8) :: Eav
-    real(8) :: Esq
     real(8) :: var
     integer :: i
-    integer :: j
 
     call alpha_array(m, lower, upper, aarray)
+    
     open (unit = 12, file = "energies.dat", status = "replace")
-
+    
     do i = 1, m
-
         a = aarray(1, i)
-        call init_random_seed()
-        call random_number(x)
-
-        do j = 1, 4000
-            call calc_x(a, N, x)
-        end do
-
-        do j = 1, k
-            call calc_x(a, N, x)
-            call calc_E_L(a, x, E_L)
-            E_L_tot(j, :) = E_L(1, :)
-        end do
-
-        Eav = 1d0 / N * sum(1d0 / k * sum(E_L_tot, dim = 1))
-        Esq = 1d0 / N * sum(1d0 / k * sum(E_L_tot**2, dim = 1))
-        var = Esq - Eav**2
+        
+        call initialize(a, N, x)
+        call montecarlo(a, N, k, x, Eav, var)
+        
         write (12, *) a, Eav, var
-
     end do
-
+    
     close (unit = 12)
 
 contains
@@ -59,6 +42,47 @@ contains
         do i = 1, m
             aarray(1, i) = (i - 1) * (upper - lower) / (m - 1) + lower
         end do
+
+    end subroutine
+
+    subroutine initialize(a, N, x)
+
+        real(8), intent(in) :: a
+        integer, intent(in) :: N
+        real(8), dimension(:, :), intent(inout) :: x
+        integer :: i
+
+        call init_random_seed()
+        call random_number(x)
+
+        do i = 1, 4000
+            call calc_x(a, N, x)
+        end do
+
+    end subroutine
+
+    subroutine montecarlo(a, N, k, x, Eav, var)
+
+        real(8), intent(in) :: a
+        integer, intent(in) :: N
+        integer, intent(in) :: k
+        real(8), dimension(:, :), intent(inout) :: x
+        real(8), intent(inout) :: Eav
+        real(8), intent(inout) :: var
+        integer :: i
+        real(8), dimension(1, N) :: E_L
+        real(8), dimension(k, N) :: E_L_tot
+        real(8) :: Esq
+
+        do i = 1, k
+            call calc_x(a, N, x)
+            call calc_E_L(a, x, E_L)
+            E_L_tot(i, :) = E_L(1, :)
+        end do
+
+        Eav = 1d0 / N * sum(1d0 / k * sum(E_L_tot, dim = 1))
+        Esq = 1d0 / N * sum(1d0 / k * sum(E_L_tot**2, dim = 1))
+        var = Esq - Eav**2
 
     end subroutine
 
