@@ -56,7 +56,7 @@ contains
         call random_number(x)
 
         do i = 1, 4000
-            call calc_x(a, N, x)
+            call metropolis(a, N, x)
         end do
 
     end subroutine
@@ -75,7 +75,7 @@ contains
         real(8) :: Esq
 
         do i = 1, k
-            call calc_x(a, N, x)
+            call metropolis(a, N, x)
             call calc_E_L(a, x, E_L)
             E_L_tot(i, :) = E_L(1, :)
         end do
@@ -102,7 +102,7 @@ contains
 
     end subroutine
 
-    subroutine calc_x(a, N, x)
+    subroutine metropolis(a, N, x)
 
         real(8), intent(in) :: a
         integer, intent(in) :: N
