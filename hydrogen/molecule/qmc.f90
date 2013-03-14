@@ -3,36 +3,40 @@ program qmc
     implicit none
 
     integer, parameter :: N = 400           ! number of walkers
-    integer, parameter :: k = 26*10**3      ! number of walks
-    integer, parameter :: beta_m = 5        ! number of beta values
-	real(8), parameter :: beta_lower = 0.4  ! lower limit of beta range
-    real(8), parameter :: beta_upper = 0.7  ! upper limit of beta range
-    integer, parameter :: beta_m = 5        ! number of beta values
-    real(8), dimension(1, m) :: beta_array
-    real(8) :: beta
-	real(8), parameter :: s_lower = 1       ! lower limit of s range
+    real(8), parameter :: s_lower = 1       ! lower limit of s range
     real(8), parameter :: s_upper = 2       ! upper limit of s range
     integer, parameter :: s_m = 5           ! number of s values
-    real(8), dimension(1, m) :: s_array
+    real(8), dimension(1, s_m) :: s_array
     real(8) :: s
-    real(8), dimension(3, N) :: r1
-    real(8), dimension(3, N) :: r2
+    integer, parameter :: k = 26*10**3      ! number of walks
+    real(8), parameter :: beta_lower = 0.4  ! lower limit of beta range
+    real(8), parameter :: beta_upper = 0.7  ! upper limit of beta range
+    integer, parameter :: beta_m = 5        ! number of beta values
+    real(8), dimension(1, beta_m) :: beta_array
+    real(8) :: beta
+    real(8) :: a
+    real(8), dimension(6, N) :: r
     real(8) :: Eav
     real(8) :: var
     integer :: i
+    integer :: j
 
     beta_array = array(beta_m, beta_lower, beta_upper)
     s_array = array(s_m, s_lower, s_upper)
     
     open (unit = 12, file = "energies.dat", status = "replace")
     
-    do i = 1, m
-        a = aarray(1, i)
+    do i = 1, s_m
+        s = s_array(1, i)
+        call cusp(s)
+        do j = 1, beta_m
+            beta = beta_array(1, j)
+
+            call initialize(s, beta, a, N, r)
+            call montecarlo(s, beta, a, N, k, r, Eav, var)
         
-        call initialize(s, beta, N, r1, r2)
-        call montecarlo(s, beta, N, k, r1, r2, Eav, var)
-        
-        write (12, *) s, beta, Eav, var
+            write (12, *) s, beta, Eav, var
+        end do
     end do
     
     close (unit = 12)
@@ -44,40 +48,57 @@ contains
         integer, intent(in) :: m
         real(8), intent(in) :: lower
         real(8), intent(in) :: upper
-        real(8), dimension (:, :), intent(out) :: array
+        real(8), dimension (1, m) :: array
         integer :: i
 
         do i = 1, m
             array(1, i) = (i - 1) * (upper - lower) / (m - 1) + lower
         end do
-
+    
     end function
 
-    subroutine initialize(s, beta, N, r1, r2)
+    subroutine cusp(s)
+
+        real(8), intent(in) :: s
+        real(8) :: a
+        integer :: i
+
+        print *, "________________________________________"
+        a = 1
+        do i = 1, 5
+            a = a + (s / a**2 * exp(- s / a) - 1) / (1d0 + exp(- s / a) - a)
+            print *, a
+        end do
+        print*, "________________________________________"
+
+    end subroutine
+
+    subroutine initialize(s, beta, a, N, r)
 
         real(8), intent(in) :: s
         real(8), intent(in) :: beta
+        real(8), intent(in) ::a
         integer, intent(in) :: N
-        real(8), dimension(:, :), intent(inout) :: r1
-        real(8), dimension(:, :), intent(inout) :: r2
+        real(8), dimension(:, :), intent(inout) :: r
         integer :: i
 
         call init_random_seed()
-        call random_number(r1)
-        call random_number(r2)
+        call random_number(r)
 
         do i = 1, 4000
-            call metropolis(a, N, x)
+            call metropolis(s, beta, a, N, r)
         end do
 
     end subroutine
 
-    subroutine montecarlo(a, N, k, x, Eav, var)
+    subroutine montecarlo(s, beta, a, N, k, r, Eav, var)
 
+        real(8), intent(in) :: s
+        real(8), intent(in) :: beta
         real(8), intent(in) :: a
         integer, intent(in) :: N
         integer, intent(in) :: k
-        real(8), dimension(:, :), intent(inout) :: x
+        real(8), dimension(:, :), intent(inout) :: r
         real(8), intent(inout) :: Eav
         real(8), intent(inout) :: var
         integer :: i
@@ -86,8 +107,8 @@ contains
         real(8) :: Esq
 
         do i = 1, k
-            call metropolis(a, N, x)
-            call calc_E_L(a, x, E_L)
+            call metropolis(s, beta, a, N, r)
+            call calc_E_L(s, beta, a, r, E_L)
             E_L_array(i, :) = E_L(1, :)
         end do
 
@@ -113,44 +134,55 @@ contains
 
     end subroutine
 
-    subroutine metropolis(a, N, x)
+    subroutine metropolis(s, beta, a, N, r)
 
+        real(8), intent(in) :: s
+        real(8), intent(in) :: beta
         real(8), intent(in) :: a
         integer, intent(in) :: N
-        real(8), dimension(:, :), intent(inout) :: x
-        real(8), dimension(3, N) :: delta_x
+        real(8), dimension(:, :), intent(inout) :: r
+        real(8), dimension(3, N) :: delta_r
         real(8), dimension(1, N) :: p
         real(8), dimension(1, N) :: u
         real(8), dimension(1, N) :: tf 
+        integer :: i
 
-        call random_number(delta_x)
-        delta_x = 1d0 * (delta_x(:, :) - 0.5d0)
-        p = min(psi(a, x + delta_x) / psi(a, x) , 1d0)
+        call random_number(delta_r)
+        delta_r = 1d0 * (delta_r(:, :) - 0.5d0)
+        p = min(psi(s, beta, a, r + delta_r) / psi(s, beta, a, r) , 1d0)
         call random_number(u)
         tf = merge(1, 0, u < p)
-        x(1, :) = x(1, :) + tf(1, :) * delta_x(1, :)
-        x(2, :) = x(2, :) + tf(1, :) * delta_x(2, :)
-        x(3, :) = x(3, :) + tf(1, :) * delta_x(3, :)
+        do i = 1, 6
+            r(i, :) = r(i, :) + tf(i, :) * delta_r(i, :)
+        end do
 
     end subroutine
 
-    subroutine calc_E_L(a, x, E_L)
+    subroutine calc_E_L(s, beta, a, r, E_L)
 
+        real(8), intent(in) :: s
+        real(8), intent(in) :: beta
         real(8), intent(in) :: a
-        real(8), dimension(:, :), intent(in) :: x
+        real(8), dimension(:, :), intent(in) :: r
+        real(8), dimension(3, size(r, dim = 2)) :: r1
+        real(8), dimension(3, size(r, dim = 2)) :: r2
         real(8), dimension(:, :), intent(inout) :: E_L
 
-        E_L(1, :) = 3d0 * a + (1 / 2d0 - 2d0 * a**2) * sum(x**2, dim = 1)
+        r1 = r(1:3, :)
+        r2 = r(4:6, :)
+        E_L(1, :) = 1 
 
     end subroutine
 
-    function psi(a, x)
+    function psi(s, beta, a, r)
 
+        real(8), intent(in) :: s
+        real(8), intent(in) :: beta
         real(8), intent(in) :: a
-        real(8), dimension(:, :), intent(in) :: x
-        real(8), dimension(1, size(x, dim = 2)) :: psi
+        real(8), dimension(:, :), intent(in) :: r
+        real(8), dimension(1, size(r, dim = 2)) :: psi
 
-        psi(1, :) = exp(-2d0 * a * sum(x**2, dim = 1))
+        psi(1, :) = 1
 
     end function
 

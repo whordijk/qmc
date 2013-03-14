@@ -128,8 +128,10 @@ contains
         real(8), intent(in) :: a
         real(8), dimension(:, :), intent(in) :: x
         real(8), dimension(:, :), intent(inout) :: E_L
+        real(8), dimension(1, size(E_L)) :: xsq
 
-        E_L(1, :) = - 1d0 / sqrt(sum(x**2, dim =1)) - 1d0 / 2 * a * ( a - 2d0 / sqrt(sum(x**2, dim = 1))) 
+        xsq(1, :) = sqrt(sum(x**2, dim = 1))
+        E_L = - 1d0 / xsq - 1d0 / 2 * a * (a - 2d0 / xsq) 
 
     end subroutine
 
