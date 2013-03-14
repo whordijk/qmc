@@ -71,17 +71,17 @@ contains
         real(8), intent(inout) :: var
         integer :: i
         real(8), dimension(1, N) :: E_L
-        real(8), dimension(k, N) :: E_L_tot
+        real(8), dimension(k, N) :: E_L_array
         real(8) :: Esq
 
         do i = 1, k
             call metropolis(a, N, x)
             call calc_E_L(a, x, E_L)
-            E_L_tot(i, :) = E_L(1, :)
+            E_L_array(i, :) = E_L(1, :)
         end do
 
-        Eav = 1d0 / N * sum(1d0 / k * sum(E_L_tot, dim = 1))
-        Esq = 1d0 / N * sum(1d0 / k * sum(E_L_tot**2, dim = 1))
+        Eav = 1d0 / N * sum(1d0 / k * sum(E_L_array, dim = 1))
+        Esq = 1d0 / N * sum(1d0 / k * sum(E_L_array**2, dim = 1))
         var = Esq - Eav**2
 
     end subroutine
