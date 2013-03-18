@@ -80,8 +80,8 @@ contains
             E_L_array(i, :) = E_L(1, :)
         end do
 
-        Eav = 1d0 / N * sum(1d0 / k * sum(E_L_array, dim = 1))
-        Esq = 1d0 / N * sum(1d0 / k * sum(E_L_array**2, dim = 1))
+        Eav = 1d0 / (N * k) * sum(E_L_array)
+        Esq = 1d0 / (N * k) * sum(E_L_array**2)
         var = Esq - Eav**2
 
     end subroutine
