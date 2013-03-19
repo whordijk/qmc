@@ -2,12 +2,12 @@ program qmc
 
     implicit none
 
-    integer, parameter :: N = 400           ! number of walkers
+    integer, parameter :: N = 10           ! number of walkers
     real(8), parameter :: s_lower = 0       ! lower limit of s range
     real(8), parameter :: s_upper = 0       ! upper limit of s range
     integer, parameter :: s_m = 1           ! number of s values
     real(8), dimension(1, s_m) :: s_array
-    integer, parameter :: k = 26*10**3      ! number of walks
+    integer, parameter :: k = 26*10**2      ! number of walks
     real(8), parameter :: beta_lower = 0.05 ! lower limit of beta range
     real(8), parameter :: beta_upper = 0.25 ! upper limit of beta range
     integer, parameter :: beta_m = 9        ! number of beta values
@@ -25,8 +25,8 @@ program qmc
     do i = 1, s_m
         ! s = s_array(1, i)
         s = 0d0
-        ! call cusp(s)
-        a = 0.5d0
+        call cusp(s)
+        ! a = 0.5d0
         do j = 1, beta_m
             beta = beta_array(1, j)
 
@@ -60,11 +60,12 @@ contains
         real(8) :: a
         integer :: i
 
-        a = 0.9d0
-        do i = 1, 10
+        a = 1d0
+        do i = 1, 5
             a = a - a**2 * (1d0 + exp(- s / a) - 1d0 / a) &
                 / (1 + s * exp(- s / a))
         end do
+        print *, a
 
     end subroutine
 
@@ -124,14 +125,14 @@ contains
 
         real(8), intent(in) :: s, beta, a
         real(8), dimension(:, :), intent(inout) :: r
-        real(8), dimension(6, size(r, dim = 2)) :: delta_r
+        real(8), dimension(3, size(r, dim = 2)) :: delta_r
         real(8), dimension(1, size(r, dim = 2)) :: p, u, tf
         integer :: i
 
         call random_number(delta_r)
-        delta_r = 1d0 * (delta_r - 0.5d0)
-        p = min((psi(s, beta, a, r + delta_r)**2 &
-            / psi(s, beta, a, r)**2) , 1d0)
+        delta_r = 1d0 * (delta_r(:, :) - 0.5d0)
+        p = min(psi(s, beta, a, r + delta_r)**2 &
+            / psi(s, beta, a, r)**2 , 1d0)
         call random_number(u)
         tf = merge(1, 0, u < p)
         do i = 1, 6
@@ -199,19 +200,19 @@ contains
         real(8), dimension(3, size(r, dim = 2)) :: r1, r2
 
         r1 = r(1:3, :)
-        r1(1, :) = r1(1, :) + s / 2d0
+        r1(1, :) = r1(1, :) + s / 2
         r1L(1, :) = sqrt(sum(r1**2, dim = 1))
         r1(1, :) = r1(1, :) - s
         r1R(1, :) = sqrt(sum(r1**2, dim = 1))
 
         r2 = r(4:6, :)
-        r2(1, :) = r2(1, :) + s / 2d0
+        r2(1, :) = r2(1, :) + s / 2
         r2L(1, :) = sqrt(sum(r2**2, dim = 1))
         r2(1, :) = r2(1, :) - s
         r2R(1, :) = sqrt(sum(r2**2, dim = 1))
 
         r12(1, :) = sqrt(sum((r(1:3, :) - r(4:6, :))**2, dim = 1))
-
+        
         gam = 1d0 + beta * r12
         
         psi = (exp(- r1L / a) + exp(- r1R / a)) &
