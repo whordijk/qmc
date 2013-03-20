@@ -20,13 +20,11 @@ program qmc
     s_array = array(s_m, s_lower, s_upper)
     
     open (unit = 12, file = "energies.dat", status = "replace")
-    write (12, *) "s    beta    Eav     var"
 
     do i = 1, s_m
         ! s = s_array(1, i)
         s = 0d0
-        ! call cusp(s)
-        a = 0.5d0
+        call cusp(s, a)
         do j = 1, beta_m
             beta = beta_array(1, j)
 
@@ -54,16 +52,16 @@ contains
 
     end function
 
-    subroutine cusp(s)
+    subroutine cusp(s, a)
 
         real(8), intent(in) :: s
-        real(8) :: a
+        real(8), intent(inout) :: a
         integer :: i
 
         a = 0.9d0
         do i = 1, 10
-            a = a - a**2 * (1d0 + exp(- s / a) - 1d0 / a) &
-                / (1 + s * exp(- s / a))
+            a = a - (a * (1d0 + exp(- s / a)) - 1d0) &
+                / (1d0 + exp(- s / a) * (1d0 + 1d0 / a))
         end do
 
     end subroutine
