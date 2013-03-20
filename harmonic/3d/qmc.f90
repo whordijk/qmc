@@ -8,10 +8,8 @@ program qmc
     real(8), parameter :: lower = 0.4  ! lower limit of alpha range
     real(8), parameter :: upper = 0.6  ! upper limit of alpha range
     real(8), dimension(1, m) :: aarray
-    real(8) :: a
     real(8), dimension(3, N) :: x
-    real(8) :: Eav
-    real(8) :: var
+    real(8) :: a, Eav, var
     integer :: i
 
     call alpha_array(m, lower, upper, aarray)
@@ -34,8 +32,7 @@ contains
     subroutine alpha_array(m, lower, upper, aarray)
 
         integer, intent(in) :: m
-        real(8), intent(in) :: lower
-        real(8), intent(in) :: upper
+        real(8), intent(in) :: lower, upper
         real(8), dimension (:, :), intent(inout) :: aarray
         integer :: i
 
@@ -64,15 +61,13 @@ contains
     subroutine montecarlo(a, N, k, x, Eav, var)
 
         real(8), intent(in) :: a
-        integer, intent(in) :: N
-        integer, intent(in) :: k
+        integer, intent(in) :: N, k
         real(8), dimension(:, :), intent(inout) :: x
-        real(8), intent(inout) :: Eav
-        real(8), intent(inout) :: var
-        integer :: i
+        real(8), intent(inout) :: Eav, var
         real(8), dimension(1, N) :: E_L
         real(8), dimension(k, N) :: E_L_array
         real(8) :: Esq
+        integer :: i
 
         do i = 1, k
             call metropolis(a, N, x)
@@ -88,9 +83,7 @@ contains
 
     subroutine init_random_seed()
 
-        integer :: i
-        integer :: n
-        integer :: clock
+        integer :: i, n, clock
         integer, dimension(:), allocatable :: seed
 
         call random_seed(size = n)
@@ -108,9 +101,7 @@ contains
         integer, intent(in) :: N
         real(8), dimension(:, :), intent(inout) :: x
         real(8), dimension(3, N) :: delta_x
-        real(8), dimension(1, N) :: p
-        real(8), dimension(1, N) :: u
-        real(8), dimension(1, N) :: tf 
+        real(8), dimension(1, N) :: p, u, tf
 
         call random_number(delta_x)
         delta_x = 1d0 * (delta_x(:, :) - 0.5d0)
