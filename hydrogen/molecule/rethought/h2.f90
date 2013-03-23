@@ -4,57 +4,22 @@ module H2
     private
 
     real(8) :: s, b, a
-    integer :: s_m, b_m
-    real(8), allocatable :: walkers(:, :), E_L(:), psi(:), dr(:), s_array(:), b_array(:)
-
-    public create_arrays
+    real(8), allocatable :: walkers(:, :), E_L(:), psi(:), dr(:, :)
+    
     public init
-    public step
     public calc_energy
-    public monte_carlo
+    public step
 
 contains
 
-    subroutine create_arrays()
-
-        real(8), parameter :: s_lower = 0
-        real(8), parameter :: s_upper = 1
-        integer, parameter :: s_m = 2
-        real(8), parameter :: b_lower = 0.05
-        real(8), parameter :: b_upper = 0.25
-        integer, parameter :: b_m = 9
-    
-        allocate(s_array(s_m), b_array(b_m))    
-    
-        b_array = array(b_m, b_lower, b_upper)
-        print *, b_array
-        s_array = array(s_m, s_lower, s_upper)
-        print *, s_array
-
-    end subroutine
-
-    function array(m, lower, upper)
-
-        integer, intent(in) :: m
-        real(8), intent(in) :: lower, upper
-        real(8) :: array(m)
-        integer :: i
-
-        do i = 1, m
-            array(i) = (i - 1d0) * (upper - lower) / (m - 1d0) + lower
-        end do
-
-    end function
-
-    subroutine init(num_walkers)
+    subroutine init(num_walkers, s)
 
         integer, intent(in) :: num_walkers
+        real(8), intent(in) :: s
         integer :: i
 
-        allocate(walkers(6, num_walkers), E_L(num_walkers), psi(num_walkers), dr(6))
+        allocate(walkers(6, num_walkers), E_L(num_walkers), psi(num_walkers), dr(6, num_walkers))
 
-        s = 0d0
-        b = 0.1d0
         a = find_a(s)
 
         call random_number(walkers)
@@ -67,64 +32,22 @@ contains
 
     end subroutine
 
-    subroutine monte_carlo(num_walkers, num_walks)
+    subroutine step(dr)
 
-        integer, intent(in) :: num_walkers
-        integer, intent(in) :: num_walks
-        real(8) :: dr(6)
-        real(8) :: E
-        real(8) :: Esq
-        real(8) :: var
-        integer :: i, j, m, n
-
-        do m = 1, s_m
-            
-            s = s_array(m)
-            a = find_a(s)            
-
-            do n = 1, b_m
-
-                b = b_array(n)
-                E = 0d0
-                Esq = 0d0
-
-                do i = 1, num_walks
-                    do j = 1, num_walkers
-                        call random_number(dr)
-                        dr = (2 * dr + 1) / 2
-                        call step(walkers(:, j), dr)
-                        if (i > 4000) then
-                            E = E + calc_energy(walkers(:, j))
-                            Esq = Esq + calc_energy(walkers(:, j))**2
-                        end if
-                    end do
-                end do
-
-                E = E / (num_walkers * num_walks)
-                Esq = Esq / (num_walkers * num_walks)
-                var = Esq - E**2
-
-                write (12, *) s, b, E, var 
-            
-            end do
-        end do
-
-    end subroutine
-
-    subroutine step(walker, dr)
-
-        real(8), intent(in) :: dr(:)
-        real(8), intent(inout) :: walker(:)
+        real(8), intent(in) :: dr(:, :)
         real(8) :: psi, psi_new, u
+        integer :: i
 
-        psi = calc_psi(walker)
-        psi_new = calc_psi(walker + dr)
-
-        call random_number(u)
-        if (u < psi_new**2 / psi**2) then
-            walker = walker + dr
-        end if
-
+        do i = 1, size(dr, 2)
+            psi = calc_psi(walkers(:, i))
+            psi_new = calc_psi(walkers(:, i) + dr(:, i))
+            print *, psi_new**2 / psi**2
+            call random_number(u)
+            if (u < psi_new**2 / psi**2) then
+                walkers(:, i) = walkers(:, i) + dr(:, i)
+            end if
+        end do
+        
     end subroutine
 
     real(8) function calc_psi(walker) result(psi)
@@ -180,7 +103,7 @@ contains
 
     real(8) function calc_energy(walker) result(E)
 
-        real(8), intent(in) :: walker(:)
+        real(8) :: walker(:)
         real(8) :: r1(3)
         real(8) :: r2(3)
         real(8) :: N1(3)
