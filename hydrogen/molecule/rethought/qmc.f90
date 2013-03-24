@@ -19,15 +19,13 @@ contains
 
         integer, intent(in) :: num_walkers
         integer, intent(in) :: num_walks
-        real(8) :: E
-        real(8) :: Esq
+        real(8) :: E_L(num_walks, num_walkers)
+        real(8) :: E_T
+        real(8) :: E_T_sq
         real(8) :: var
         real(8) :: s, b
         integer :: i, j
         real(8) :: dr(6, num_walkers)
-
-        E = 0d0
-        Esq = 0d0
 
         s = 0d0
         b = 0.05d0
@@ -38,19 +36,16 @@ contains
             call random_number(dr)
             dr = 2 * dr - 1
             call step(dr)
-            if (i > 4000) then
-                do j = 1, num_walkers
-                    E = E + calc_energy(walkers(: j))
-                    Esq = Esq + calc_energy(walkers(:, j))**2
-                end do
-            end if
+            do j = 1, num_walkers
+                E_L(i, j) = calc_energy(dr(:, j)) ! I need to pass the argument 'walker' but I don't want it to be in this file
+            end do
         end do
 
-        E = E / (num_walkers * (num_walks - 4000))
-        Esq = Esq / (num_walkers * (num_walks - 4000))
-        var = Esq - E**2
+        E_T = sum(E_L) / (num_walkers * num_walks)
+        E_T_sq = sum(E_L**2) / (num_walkers * num_walks)
+        var = E_T_sq - E_T**2
 
-        write (12, *) s, b, E, var
+        write (12, *) s, b, E_T, var
 
     end subroutine
 
