@@ -3,22 +3,21 @@ module H2
     implicit none
     private
 
-    real(8) :: s, b, a
-    real(8), allocatable :: walkers(:, :), E_L(:), psi(:), dr(:, :)
+    real(8), allocatable :: walkers(:, :), E_L(:), psi(:)
     
     public init
-    public calc_energy
-    public step
+    public monte_carlo
 
 contains
 
-    subroutine init(num_walkers, s)
+    subroutine init(num_walkers, s, b)
 
         integer, intent(in) :: num_walkers
-        real(8), intent(in) :: s
+        real(8), intent(in) :: s, b
+        real(8) :: a
         integer :: i
 
-        allocate(walkers(6, num_walkers), E_L(num_walkers), psi(num_walkers), dr(6, num_walkers))
+        allocate(walkers(6, num_walkers), E_L(num_walkers), psi(num_walkers))
 
         a = find_a(s)
 
@@ -26,22 +25,53 @@ contains
         walkers = 2 * walkers - 1
 
         do i = 1, num_walkers
-            psi(i) = calc_psi(walkers(:, i))
-            E_L(i) = calc_energy(walkers(:, i))
+            psi(i) = calc_psi(walkers(:, i), s, b, a)
+            E_L(i) = calc_energy(walkers(:, i), s, b, a)
         end do
 
     end subroutine
 
-    subroutine step(dr)
+    subroutine monte_carlo(num_walkers, num_walks, s, b)
+
+        integer, intent(in) :: num_walks
+        integer, intent(in) :: num_walkers
+        integer, parameter :: cutoff = 4000
+        real(8) :: dr(6, num_walkers)
+        real(8) :: E(num_walks - cutoff, num_walkers)
+        real(8) :: E_T, E_T_sq, var, a
+        real(8), intent(in) :: s, b
+        integer :: i, j
+
+        a = find_a(s)
+
+        do i = 1, num_walks
+            call random_number(dr)
+            dr = 2 * dr - 1
+            call step(dr, s, b, a)
+            do j = 1, num_walkers
+                if (i > cutoff) then
+                    E(i - cutoff, j) = calc_energy(walkers(:, j), s, b, a)
+                end if
+            end do
+        end do
+
+        E_T = sum(E) / (num_walkers * (num_walks - cutoff))
+        E_T_sq = sum(E**2) / (num_walkers * (num_walks - cutoff))
+        var = E_T_sq - E_T**2
+        write (12, *) s, b, E_T, var
+
+    end subroutine
+
+    subroutine step(dr, s, b, a)
 
         real(8), intent(in) :: dr(:, :)
+        real(8), intent(in) :: s, b, a
         real(8) :: psi, psi_new, u
         integer :: i
 
         do i = 1, size(dr, 2)
-            psi = calc_psi(walkers(:, i))
-            psi_new = calc_psi(walkers(:, i) + dr(:, i))
-            print *, psi_new**2 / psi**2
+            psi = calc_psi(walkers(:, i), s, b, a)
+            psi_new = calc_psi(walkers(:, i) + dr(:, i), s, b, a)
             call random_number(u)
             if (u < psi_new**2 / psi**2) then
                 walkers(:, i) = walkers(:, i) + dr(:, i)
@@ -50,26 +80,14 @@ contains
         
     end subroutine
 
-    real(8) function calc_psi(walker) result(psi)
+    real(8) function calc_psi(walker, s, b, a) result(psi)
     
         real(8), intent(in) :: walker(:)
-        real(8) :: r1(3)
-        real(8) :: r2(3)
-        real(8) :: N1(3)
-        real(8) :: N2(3)
-        real(8) :: r1Lvec(3)
-        real(8) :: r1Rvec(3)
-        real(8) :: r2Lvec(3)
-        real(8) :: r2Rvec(3)
-        real(8) :: r1L
-        real(8) :: r1R
-        real(8) :: r2L
-        real(8) :: r2R
-        real(8) :: r12vec(3)
-        real(8) :: r12
-        real(8) :: phi1
-        real(8) :: phi2
-        real(8) :: f
+        real(8), intent(in) :: s, b, a
+        real(8) :: r1(3), r2(3), N1(3), N2(3)
+        real(8) :: r1Lvec(3), r1Rvec(3), r2Lvec(3), r2Rvec(3), r12vec(3)
+        real(8) :: r1L, r1R, r2L, r2R, r12
+        real(8) :: phi1, phi2, f
         
         N1 = 0d0
         N1(1) = -s / 2
@@ -101,26 +119,14 @@ contains
 
     end function
 
-    real(8) function calc_energy(walker) result(E)
+    real(8) function calc_energy(walker, s, b, a) result(E)
 
-        real(8) :: walker(:)
-        real(8) :: r1(3)
-        real(8) :: r2(3)
-        real(8) :: N1(3)
-        real(8) :: N2(3)
-        real(8) :: r1Lvec(3)
-        real(8) :: r1Rvec(3)
-        real(8) :: r2Lvec(3)
-        real(8) :: r2Rvec(3)
-        real(8) :: r1L
-        real(8) :: r1R
-        real(8) :: r2L
-        real(8) :: r2R
-        real(8) :: r12vec(3)
-        real(8) :: r12
-        real(8) :: phi1
-        real(8) :: phi2
-        real(8) :: g
+        real(8), intent(in) :: walker(:)
+        real(8), intent(in) :: s, b, a
+        real(8) :: r1(3), r2(3), N1(3), N2(3)
+        real(8) :: r1Lvec(3), r1Rvec(3), r2Lvec(3), r2Rvec(3), r12vec(3)
+        real(8) :: r1L, r1R, r2L, r2R, r12
+        real(8) :: phi1, phi2, g
 
         N1 = 0d0
         N1(1) = -s / 2

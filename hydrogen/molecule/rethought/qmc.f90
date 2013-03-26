@@ -4,49 +4,43 @@ program qmc
 
     implicit none
 
-    integer, parameter :: num_walkers = 1
+    integer, parameter :: num_walkers = 400
     integer, parameter :: num_walks = 30000
+    real(8), parameter :: s_lower = 1
+    real(8), parameter :: s_upper = 2
+    integer, parameter :: s_num = 9
+    real(8), parameter :: b_lower = 0.05
+    real(8), parameter :: b_upper = 0.25
+    integer, parameter :: b_num = 9
+    real(8) :: s, b
+    integer :: i, j
 
     open (unit = 12, file = 'energies.dat', status = 'replace')
-    
-    call monte_carlo(num_walkers, num_walks)
+
+    call init(num_walkers, 0d0, 0d0)
+
+    do i = 1, 1 !s_num
+        s = 0
+        !s = next_value(i, s_lower, s_upper, s_num)
+        print *, s
+        do j = 1, b_num
+            b = next_value(j, b_lower, b_upper, b_num)
+            print *, "------", b
+            call monte_carlo(num_walkers, num_walks, s, b)
+        end do
+    end do
 
     close (unit = 12)
 
 contains
 
-    subroutine monte_carlo(num_walkers, num_walks)
+    real(8) function next_value(i, lower, upper, num) result(val)
 
-        integer, intent(in) :: num_walkers
-        integer, intent(in) :: num_walks
-        real(8) :: E_L(num_walks, num_walkers)
-        real(8) :: E_T
-        real(8) :: E_T_sq
-        real(8) :: var
-        real(8) :: s, b
-        integer :: i, j
-        real(8) :: dr(6, num_walkers)
+        real(8), intent(in) :: lower, upper
+        integer, intent(in) :: i, num
+        
+        val = (i - 1) * (upper - lower) / (num - 1) + lower
 
-        s = 0d0
-        b = 0.05d0
-
-        call init(num_walkers, s)
-
-        do i = 1, num_walks
-            call random_number(dr)
-            dr = 2 * dr - 1
-            call step(dr)
-            do j = 1, num_walkers
-                E_L(i, j) = calc_energy(dr(:, j)) ! I need to pass the argument 'walker' but I don't want it to be in this file
-            end do
-        end do
-
-        E_T = sum(E_L) / (num_walkers * num_walks)
-        E_T_sq = sum(E_L**2) / (num_walkers * num_walks)
-        var = E_T_sq - E_T**2
-
-        write (12, *) s, b, E_T, var
-
-    end subroutine
+    end function
 
 end program
