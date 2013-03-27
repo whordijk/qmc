@@ -4,8 +4,8 @@ program qmc
 
     implicit none
 
-    integer, parameter :: num_walkers = 400
-    integer, parameter :: num_walks = 30000
+    integer, parameter :: num_walkers = 40
+    integer, parameter :: num_walks = 10000
     real(8), parameter :: s_lower = 1
     real(8), parameter :: s_upper = 2
     integer, parameter :: s_num = 9
@@ -19,9 +19,8 @@ program qmc
 
     call init(num_walkers, 0d0, 0d0)
 
-    do i = 1, 1 !s_num
-        s = 0
-        !s = next_value(i, s_lower, s_upper, s_num)
+    do i = 1, s_num
+        s = next_value(i, s_lower, s_upper, s_num)
         print *, s
         do j = 1, b_num
             b = next_value(j, b_lower, b_upper, b_num)
