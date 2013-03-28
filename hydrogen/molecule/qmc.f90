@@ -5,43 +5,64 @@ program qmc
     implicit none
 
     integer, parameter :: num_walkers = 400
-    integer, parameter :: num_walks = 30000
-    real(8), parameter :: b_min = 0.05
-    real(8), parameter :: b_max = 0.25
-    integer, parameter :: b_num = 9
-    integer :: i
+    integer, parameter :: num_init   = 4000
+    integer, parameter :: num_walks = 26000
+    real(8), parameter :: s_min = 1
+    real(8), parameter :: s_max = 2
+    integer, parameter :: s_num = 21
+    real(8), parameter :: b_min = 0.4
+    real(8), parameter :: b_max = 0.7
+    integer, parameter :: b_num = 21
+    integer :: i, j
 
     open (unit = 12, file = 'energies.dat', status = 'replace')
 
     call init(num_walkers)
-    do i = 1, b_num
-        call set_params(i, b_min, b_max, b_num)
-        call monte_carlo(num_walkers, num_walks)
+    do i = 1, s_num
+        do j = 1, b_num
+            call set_params(i, s_min, s_max, s_num, j, b_min, b_max, b_num)
+            call initialize(num_init)
+            call monte_carlo(num_walks)
+        end do
     end do
 
     close (unit = 12)
 
 contains
 
-    subroutine monte_carlo(num_walkers, num_walks)
+    subroutine initialize(steps)
 
-        integer, parameter :: cutoff = 4000
-        integer, intent(in) :: num_walkers, num_walks
-        real(8) :: dr(6, num_walkers), E_L(num_walks - cutoff, num_walkers), E_T, E_Tsq
+        integer, intent(in) :: steps
+        real(8) :: dr, mu(2)
         integer :: i
 
-        do i = 1, num_walks
-            call random_number(dr)
-            dr = 2 * dr - 1
+        dr = 1
+        do i = 1, steps
             call step(dr)
-            if (i > cutoff) then
-                call calc_local_energies(num_walkers, E_L(i - cutoff, :))
-            end if
+            call local_energy(mu)
         end do
-        E_T = sum(E_L) / (num_walkers * (num_walks - cutoff))
-        E_Tsq = sum(E_L**2) / (num_walkers * (num_walks - cutoff))
 
-        call write_to_file(E_T, E_Tsq - E_T**2)
+    end subroutine
+    
+    subroutine monte_carlo(steps)
+
+        integer, intent(in) :: steps
+        real(8) :: dr, mu(2), E_T, E_Tsq, var
+        integer :: i
+
+        E_T = 0
+        E_Tsq = 0
+        dr = 1
+        do i = 1, steps
+            call step(dr)
+            call local_energy(mu)
+            E_T = E_T + mu(1)
+            E_Tsq = E_Tsq + mu(2)
+        end do
+
+        E_T = E_T / steps
+        var = E_Tsq / steps - E_T**2
+        call write_to_file(E_T, var)
 
     end subroutine
 

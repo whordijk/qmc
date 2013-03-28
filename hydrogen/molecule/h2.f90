@@ -9,7 +9,7 @@ module H2
     public init
     public set_params
     public step
-    public calc_local_energies
+    public local_energy
     public write_to_file
 
 contains
@@ -31,61 +31,60 @@ contains
 
     end subroutine
 
-    subroutine set_params(i, b_min, b_max, b_num)
+    subroutine set_params(i, s_min, s_max, s_num, j, b_min, b_max, b_num)
 
-        integer, intent(in) :: i, b_num
-        real(8), intent(in) :: b_min, b_max
+        integer, intent(in) :: i, s_num, j, b_num
+        real(8), intent(in) :: s_min, s_max, b_min, b_max
 
-        s = 0
-        b = (i - 1) * (b_max - b_min) / (b_num - 1) + b_min
+        s = (i - 1) * (s_max - s_min) / (s_num - 1) + s_min
+        b = (j - 1) * (b_max - b_min) / (b_num - 1) + b_min
         a = find_a()
 
-        print *, "Calculating energies for s =", s, "and b =", b
+        print *, "s :", s
+        print *, "  b :", b
 
     end subroutine
     
     subroutine step(dr)
 
-        real(8), intent(in) :: dr(:, :)
-        real(8) :: psi, psi_new, u
-        integer :: i
+        real(8), intent(inout) :: dr
+        real(8) :: r(6)
+        real(8) :: psi_new, u
+        integer :: i, accept
 
-        do i = 1, size(dr, 2)
-            psi = calc_psi(walkers(:, i))
-            psi_new = calc_psi(walkers(:, i) + dr(:, i))
+        accept = 0
+        do i = 1, size(walkers, 2)            
+            call random_number(r)
+            r = walkers(:, i) + (2 * r - 1) * dr
+            psi_new = calc_psi(r)
             call random_number(u)
-            if (u < psi_new**2 / psi**2) then
-                walkers(:, i) = walkers(:, i) + dr(:, i)
+            if (u < psi_new**2 / psi(i)**2) then
+                walkers(:, i) = r
+                E_L(i) = calc_energy(r)
+                psi(i) = psi_new
+                accept = accept + 1
             end if
-        end do        
+        end do
+        dr = dr * accept / (size(walkers, 2) * 0.5_8)
 
     end subroutine
 
-    subroutine calc_local_energies(num_walkers, E)
-
-        integer, intent(in) :: num_walkers
-        real(8), intent(inout) :: E(:)
-        integer :: i
-
-        do i = 1, num_walkers
-            if (i .eq. 1) then
-                E(i) = calc_energy(walkers(:, i))
-            else
-                if (walkers(1, i) .eq. walkers(1, i)) then
-                    E(i) = E(i - 1)
-                else
-                    E(i) = calc_energy(walkers(:, i))
-                end if
-            end if
-        end do
+    subroutine local_energy(mu)
         
+        real(8), intent(inout) :: mu(:)
+        integer :: i
+    
+        do i = 1, size(mu)
+            mu(i) = sum(E_L**i) / size(E_L)
+        end do
+
     end subroutine
 
     subroutine write_to_file(E, var)
 
         real(8), intent(in) :: E, var
 
-        write(12, *) s, b, E, var
+        write(12, *) s, b, E + 1 / s, var
 
     end subroutine
 
@@ -134,7 +133,7 @@ contains
         phi1 = exp(-r1L / a) + exp(-r1R / a)
         phi2 = exp(-r2L / a) + exp(-r2R / a)
 
-        f = exp(r12 / (1 + b * r12))
+        f = exp(r12 / (2 * (1 + b * r12)))
 
         psi = phi1 * phi2 * f 
 
