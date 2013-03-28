@@ -134,7 +134,7 @@ contains
         phi1 = exp(-r1L / a) + exp(-r1R / a)
         phi2 = exp(-r2L / a) + exp(-r2R / a)
 
-        f = exp(r12 / (1 + b * r12))
+        f = exp(r12 / (2 * (1 + b * r12)))
 
         psi = phi1 * phi2 * f 
 
