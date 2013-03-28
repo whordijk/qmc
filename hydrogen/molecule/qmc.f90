@@ -26,11 +26,8 @@ contains
     subroutine monte_carlo(num_walkers, num_walks)
 
         integer, parameter :: cutoff = 4000
-        integer, intent(in) :: num_walkers
-        integer, intent(in) :: num_walks
-        real(8) :: dr(6, num_walkers)
-        real(8) :: E_L(num_walks - cutoff, num_walkers)
-        real(8) :: E_T, E_Tsq
+        integer, intent(in) :: num_walkers, num_walks
+        real(8) :: dr(6, num_walkers), E_L(num_walks - cutoff, num_walkers), E_T, E_Tsq
         integer :: i
 
         do i = 1, num_walks

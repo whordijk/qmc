@@ -5,7 +5,6 @@ module H2
 
     real(8), allocatable :: walkers(:, :), E_L(:), psi(:)
     real(8) :: s, b, a
-    logical :: w
 
     public init
     public set_params
@@ -23,7 +22,7 @@ contains
 
         a = find_a()
         call random_number(walkers)
-        walkers = 10 * (2 * walkers - 1)
+        walkers = 2 * walkers - 1
 
         do i = 1, num_walkers
             psi(i) = calc_psi(walkers(:, i))
@@ -69,7 +68,15 @@ contains
         integer :: i
 
         do i = 1, num_walkers
-            E(i) = calc_energy(walkers(:, i))
+            if (i .eq. 1) then
+                E(i) = calc_energy(walkers(:, i))
+            else
+                if (walkers(1, i) .eq. walkers(1, i)) then
+                    E(i) = E(i - 1)
+                else
+                    E(i) = calc_energy(walkers(:, i))
+                end if
+            end if
         end do
         
     end subroutine
@@ -103,9 +110,9 @@ contains
         real(8) :: r1L, r1R, r2L, r2R, r12
         real(8) :: phi1, phi2, f
  
-        N1 = 0d0
+        N1 = 0
         N1(1) = -s / 2
-        N2 = 0d0
+        N2 = 0
         N2(1) = s / 2
 
         r1 = walker(1:3)
@@ -141,9 +148,9 @@ contains
         real(8) :: r1L, r1R, r2L, r2R, r12
         real(8) :: phi1, phi2, g
 
-        N1 = 0d0
+        N1 = 0
         N1(1) = -s / 2
-        N2 = 0d0
+        N2 = 0
         N2(1) = s / 2
 
         r1 = walker(1:3)
