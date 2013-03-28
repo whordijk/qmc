@@ -14,7 +14,6 @@ program qmc
     open (unit = 12, file = 'energies.dat', status = 'replace')
 
     call init(num_walkers)
-
     do i = 1, b_num
         call set_params(i, b_min, b_max, b_num)
         call monte_carlo(num_walkers, num_walks)
@@ -26,14 +25,26 @@ contains
 
     subroutine monte_carlo(num_walkers, num_walks)
 
+        integer, parameter :: cutoff = 4000
         integer, intent(in) :: num_walkers
         integer, intent(in) :: num_walks
         real(8) :: dr(6, num_walkers)
+        real(8) :: E_L(num_walks - cutoff, num_walkers)
+        real(8) :: E_T, E_Tsq
+        integer :: i
 
-        call random_number(dr)
-        dr = (2 * dr - 1) / 2
-        call step(dr)
-        call calc_quantities(num_walkers, num_walks)
+        do i = 1, num_walks
+            call random_number(dr)
+            dr = 2 * dr - 1
+            call step(dr)
+            if (i > cutoff) then
+                call calc_local_energies(num_walkers, E_L(i - cutoff, :))
+            end if
+        end do
+        E_T = sum(E_L) / (num_walkers * (num_walks - cutoff))
+        E_Tsq = sum(E_L**2) / (num_walkers * (num_walks - cutoff))
+
+        call write_to_file(E_T, E_Tsq - E_T**2)
 
     end subroutine
 

@@ -5,25 +5,15 @@ module H2
 
     real(8), allocatable :: walkers(:, :), E_L(:), psi(:)
     real(8) :: s, b, a
+    logical :: w
 
     public init
     public set_params
     public step
-    public calc_quantities
+    public calc_local_energies
+    public write_to_file
 
 contains
-
-    subroutine set_params(i, b_min, b_max, b_num)
-
-        integer, intent(in) :: i, b_num
-        real(8), intent(in) :: b_min, b_max
-
-        s = 0
-        b = (i - 1) * (b_max - b_min) / (b_num - 1) + b_min
-        a = find_a()
-        print *, "Calculating energies for parameters: s = ", s, " and b = ", b
-
-    end subroutine
 
     subroutine init(num_walkers)
 
@@ -33,7 +23,7 @@ contains
 
         a = find_a()
         call random_number(walkers)
-        walkers = 2 * walkers - 1
+        walkers = 10 * (2 * walkers - 1)
 
         do i = 1, num_walkers
             psi(i) = calc_psi(walkers(:, i))
@@ -42,6 +32,19 @@ contains
 
     end subroutine
 
+    subroutine set_params(i, b_min, b_max, b_num)
+
+        integer, intent(in) :: i, b_num
+        real(8), intent(in) :: b_min, b_max
+
+        s = 0
+        b = (i - 1) * (b_max - b_min) / (b_num - 1) + b_min
+        a = find_a()
+
+        print *, "Calculating energies for s =", s, "and b =", b
+
+    end subroutine
+    
     subroutine step(dr)
 
         real(8), intent(in) :: dr(:, :)
@@ -59,29 +62,21 @@ contains
 
     end subroutine
 
-    subroutine calc_quantities(num_walkers, num_walks)
+    subroutine calc_local_energies(num_walkers, E)
 
         integer, intent(in) :: num_walkers
-        integer, intent(in) :: num_walks
-        real(8) :: E, Esq, var
-        integer :: i, j
+        real(8), intent(inout) :: E(:)
+        integer :: i
 
-        E = 0
-        Esq = 0
-        var = 0
-        do i = 1, num_walks
-            do j = 1, num_walkers
-                psi(j) = calc_psi(walkers(:, j))
-                E_L(j) = calc_energy(walkers(:, j))
-            end do
-            if (i > 4000) then
-                E = E + sum(E_L)
-                Esq = Esq + sum(E_L**2)
-            end if
+        do i = 1, num_walkers
+            E(i) = calc_energy(walkers(:, i))
         end do
-        E = E / (num_walkers * (num_walks - 4000))
-        Esq = Esq / (num_walkers * (num_walks - 4000))
-        var = Esq - E**2
+        
+    end subroutine
+
+    subroutine write_to_file(E, var)
+
+        real(8), intent(in) :: E, var
 
         write(12, *) s, b, E, var
 
