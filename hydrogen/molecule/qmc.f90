@@ -9,10 +9,10 @@ program qmc
     integer, parameter :: num_walks = 26000
     real(8), parameter :: s_min = 1
     real(8), parameter :: s_max = 2
-    integer, parameter :: s_num = 21
-    real(8), parameter :: b_min = 0.4
+    integer, parameter :: s_num = 11
+    real(8), parameter :: b_min = 0.35
     real(8), parameter :: b_max = 0.7
-    integer, parameter :: b_num = 21
+    integer, parameter :: b_num = 8
     integer :: i, j
 
     open (unit = 12, file = 'energies.dat', status = 'replace')
@@ -21,8 +21,8 @@ program qmc
     do i = 1, s_num
         do j = 1, b_num
             call set_params(i, s_min, s_max, s_num, j, b_min, b_max, b_num)
-            call initialize(num_init)
-            call monte_carlo(num_walks)
+            call monte_carlo(num_init, 0)
+            call monte_carlo(num_walks, 1)
         end do
     end do
 
@@ -30,23 +30,9 @@ program qmc
 
 contains
 
-    subroutine initialize(steps)
+    subroutine monte_carlo(steps, n)
 
-        integer, intent(in) :: steps
-        real(8) :: dr, mu(2)
-        integer :: i
-
-        dr = 1
-        do i = 1, steps
-            call step(dr)
-            call local_energy(mu)
-        end do
-
-    end subroutine
-    
-    subroutine monte_carlo(steps)
-
-        integer, intent(in) :: steps
+        integer, intent(in) :: steps, n
         real(8) :: dr, mu(2), E_T, E_Tsq, var
         integer :: i
 
@@ -62,7 +48,9 @@ contains
 
         E_T = E_T / steps
         var = E_Tsq / steps - E_T**2
-        call write_to_file(E_T, var)
+        if (n == 1) then
+            call write_to_file(E_T, var)
+        end if
 
     end subroutine
 
