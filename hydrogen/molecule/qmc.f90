@@ -7,12 +7,12 @@ program qmc
     integer, parameter :: num_walkers = 400
     integer, parameter :: num_init   = 4000
     integer, parameter :: num_walks = 26000
-    real(8), parameter :: s_min = 1
-    real(8), parameter :: s_max = 2
-    integer, parameter :: s_num = 11
-    real(8), parameter :: b_min = 0.35
-    real(8), parameter :: b_max = 0.7
-    integer, parameter :: b_num = 8
+    real(8), parameter :: s_min = 0.5
+    real(8), parameter :: s_max = 4
+    integer, parameter :: s_num = 21
+    real(8), parameter :: b_min = 0.2
+    real(8), parameter :: b_max = 0.8
+    integer, parameter :: b_num = 21
     integer :: i, j
 
     open (unit = 12, file = 'energies.dat', status = 'replace')
